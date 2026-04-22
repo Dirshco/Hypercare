@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HyperCare AI</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2d89ef">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body { font-family: Arial; margin:20px; background:#f4f8fb; }
+h1 { text-align:center; }
+.card { background:white; padding:20px; margin-bottom:20px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1); }
+button { padding:12px; font-size:18px; border:none; border-radius:8px; background:#2d89ef; color:white; width:100%; margin-top:10px; }
+button:hover { background:#1b5fa7; }
+input { width:100%; padding:10px; font-size:18px; margin-bottom:10px; }
+.high { color:red; font-weight:bold; }
+.warning { color:orange; font-weight:bold; }
+.normal { color:green; font-weight:bold; }
+#installBtn { display:none; background:green; }
+</style>
+</head>
+
+<body>
+
+<h1>HyperCare AI</h1>
+
+<button id="installBtn">Install App</button>
+
+<div class="card">
+<h2>Log Blood Pressure</h2>
+<input type="number" id="sys" placeholder="Systolic">
+<input type="number" id="dia" placeholder="Diastolic">
+<button onclick="saveBP()">Save Reading</button>
+<button onclick="startVoice()">🎤 Voice Input</button>
+<p id="result"></p>
+</div>
+
+<div class="card">
+<h2>Trend Graph</h2>
+<canvas id="bpChart"></canvas>
+</div>
+
+<div class="card">
+<h2>Medication List</h2>
+<input type="text" id="medName" placeholder="Medication">
+<input type="text" id="medDose" placeholder="Dose">
+<button onclick="addMed()">Add Medication</button>
+<ul id="medList"></ul>
+</div>
+
+<div class="card">
+<h2>Export</h2>
+<button onclick="exportPDF()">Export Doctor Report (PDF)</button>
+<button onclick="caregiverExport()">Generate Caregiver Summary</button>
+</div>
+
+<script>
+let readings = JSON.parse(localStorage.getItem("bp")) || [];
+let meds = JSON.parse(localStorage.getItem("meds")) || [];
+
+function saveBP(){
+let sys = parseInt(document.getElementById("sys").value);
+let dia = parseInt(document.getElementById("dia").value);
+if(!sys || !dia){ alert("Enter valid numbers"); return;}
+
+let entry = {sys, dia, date:new Date().toLocaleDateString()};
+readings.push(entry);
+localStorage.setItem("bp", JSON.stringify(readings));
+
+classify(sys,dia);
+updateChart();
+aiRiskCheck();
+}
+
+function classify(sys,dia){
+let text="";
+if(sys>=180||dia>=120) text="<span class='high'>Crisis - Seek Emergency Care</span>";
+else if(sys>=140||dia>=90) text="<span class='high'>Stage 2</span>";
+else if(sys>=130||dia>=80) text="<span class='warning'>Stage 1</span>";
+else if(sys<120&&dia<80) text="<span class='normal'>Normal</span>";
+else text="<span class='warning'>Elevated</span>";
+document.getElementById("result").innerHTML=text;
+}
+
+function aiRiskCheck(){
+if(readings.length<3) return;
+let last3 = readings.slice(-3);
+let avgSys = last3.reduce((a,b)=>a+b.sys,0)/3;
+if(avgSys>150){
+alert("⚠ AI Warning: Sustained high BP trend detected. Consider contacting your doctor.");
+}
+}
+
+function addMed(){
+let name=document.getElementById("medName").value;
+let dose=document.getElementById("medDose").value;
+if(!name||!dose){alert("Enter medication");return;}
+meds.push({name,dose});
+localStorage.setItem("meds", JSON.stringify(meds));
+displayMeds();
+}
+
+function displayMeds(){
+let list=document.getElementById("medList");
+list.innerHTML="";
+meds.forEach(m=>{
+let li=document.createElement("li");
+li.textContent=m.name+" - "+m.dose;
+list.appendChild(li);
+});
+}
+displayMeds();
+
+function exportPDF(){
+const { jsPDF } = window.jspdf;
+let doc = new jsPDF();
+doc.text("HyperCare BP Report",20,20);
+let y=30;
+readings.forEach(r=>{
+doc.text(`${r.date} - ${r.sys}/${r.dia}`,20,y);
+y+=10;
+});
+doc.save("BP_Report.pdf");
+}
+
+function caregiverExport(){
+let summary = readings.slice(-5).map(r=>`${r.date}: ${r.sys}/${r.dia}`).join("\n");
+alert("Caregiver Summary:\n\n"+summary);
+}
+
+function updateChart(){
+let ctx=document.getElementById("bpChart").getContext("2d");
+let labels=readings.map(r=>r.date);
+let sysData=readings.map(r=>r.sys);
+let diaData=readings.map(r=>r.dia);
+
+new Chart(ctx,{
+type:"line",
+data:{
+labels:labels,
+datasets:[
+{label:"Systolic",data:sysData,borderColor:"red"},
+{label:"Diastolic",data:diaData,borderColor:"blue"}
+]
+}
+});
+}
+updateChart();
+
+function startVoice(){
+if(!('webkitSpeechRecognition'in window)){alert("Voice not supported");return;}
+let recognition=new webkitSpeechRecognition();
+recognition.onresult=function(e){
+let speech=e.results[0][0].transcript;
+let numbers=speech.match(/\d+/g);
+if(numbers&&numbers.length>=2){
+document.getElementById("sys").value=numbers[0];
+document.getElementById("dia").value=numbers[1];
+}
+};
+recognition.start();
+}
+
+/* PWA INSTALL */
+let deferredPrompt;
+window.addEventListener("beforeinstallprompt",(e)=>{
+e.preventDefault();
+deferredPrompt=e;
+document.getElementById("installBtn").style.display="block";
+});
+document.getElementById("installBtn").addEventListener("click",()=>{
+deferredPrompt.prompt();
+});
+
+/* Register Service Worker */
+if("serviceWorker" in navigator){
+navigator.serviceWorker.register("service-worker.js");
+}
+</script>
+
+</body>
+</html>
