@@ -10,6 +10,36 @@
 ✅ Local encrypted-ready structure
 ✅ Production-structured PWA
 <hr>
+  hypercare/
+│
+├── frontend/
+│   ├── index.html
+│   ├── manifest.json
+│   ├── service-worker.js
+│   ├── css/
+│   │    └── styles.css
+│   └── js/
+│        ├── config.js
+│        ├── encryption.js
+│        ├── auth.js
+│        ├── api.js
+│        ├── bluetooth.js
+│        ├── ai.js
+│        ├── audit.js
+│        └── app.js
+│
+├── backend/
+│   ├── server.js
+│   ├── db.js
+│   ├── routes/
+│   │     ├── auth.js
+│   │     ├── patients.js
+│   │     └── guidelines.js
+│   └── package.json
+│
+└── clinician-portal/
+    ├── index.html
+    └── app.js
 <b>  ✅ WHAT THIS VERSION NOW INCLUDES</b>
 Feature	Status
 Secure local storage	✅ (mock encrypted)
