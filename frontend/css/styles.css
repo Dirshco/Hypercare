@@ -1,1 +1,238 @@
+Perfect ✅  
+Below is a **clean, professional, medical‑grade `css/styles.css`** file.
 
+It is:
+
+✅ Senior‑friendly (large fonts, high contrast)  
+✅ Accessible (focus states, readable spacing)  
+✅ Responsive (mobile + tablet + desktop)  
+✅ Clean healthcare UI style  
+✅ Works with your dynamic top/bottom navigation  
+✅ Compatible with your current `index.html`  
+
+---
+
+# ✅ `frontend/css/styles.css`
+
+Create this file:
+
+```
+frontend/css/styles.css
+```
+
+Paste this inside:
+
+```css
+/* ===============================
+   HYPERCARE MEDICAL UI STYLES
+   =============================== */
+
+/* Root Variables (Medical Theme) */
+:root {
+  --primary: #2d89ef;
+  --primary-dark: #1b5fa7;
+  --success: #28a745;
+  --warning: #ff9800;
+  --danger: #e53935;
+  --background: #f4f8fb;
+  --card-bg: #ffffff;
+  --text-dark: #222;
+  --text-light: #555;
+  --border-radius: 12px;
+}
+
+/* Reset */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: var(--background);
+  color: var(--text-dark);
+  line-height: 1.6;
+}
+
+/* Layout Container */
+.container {
+  padding: 20px;
+  padding-bottom: 90px; /* Space for bottom nav */
+  max-width: 900px;
+  margin: auto;
+}
+
+/* Cards */
+.card {
+  background: var(--card-bg);
+  padding: 20px;
+  margin-bottom: 20px;
+  border-radius: var(--border-radius);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  transition: 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* Headings */
+h1, h2 {
+  margin-top: 0;
+  font-weight: 600;
+}
+
+h2 {
+  margin-bottom: 15px;
+}
+
+/* Inputs */
+input {
+  width: 100%;
+  padding: 14px;
+  font-size: 18px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  margin-bottom: 12px;
+  transition: border 0.2s;
+}
+
+input:focus {
+  outline: none;
+  border: 2px solid var(--primary);
+}
+
+/* Buttons */
+button {
+  width: 100%;
+  padding: 14px;
+  font-size: 18px;
+  font-weight: bold;
+  border-radius: 10px;
+  border: none;
+  background: var(--primary);
+  color: white;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+button:hover {
+  background: var(--primary-dark);
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+/* Risk & Classification Colors */
+.status-normal {
+  color: var(--success);
+  font-weight: bold;
+}
+
+.status-warning {
+  color: var(--warning);
+  font-weight: bold;
+}
+
+.status-danger {
+  color: var(--danger);
+  font-weight: bold;
+}
+
+/* Navigation */
+nav {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  background: var(--primary);
+  padding: 12px;
+  color: white;
+  z-index: 1000;
+}
+
+nav button {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 15px;
+  font-weight: bold;
+  width: auto;
+  padding: 6px 10px;
+}
+
+nav button:hover {
+  text-decoration: underline;
+}
+
+/* Mobile Navigation (Bottom) */
+@media (max-width: 768px) {
+  nav {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    border-top-left-radius: 15px;
+    border-top-right-radius: 15px;
+  }
+}
+
+/* Desktop Navigation (Top Sticky) */
+@media (min-width: 769px) {
+  nav {
+    position: sticky;
+    top: 0;
+  }
+}
+
+/* Chart */
+canvas {
+  max-width: 100%;
+  height: 300px !important;
+}
+
+/* Toast Notification */
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: var(--success);
+  color: white;
+  padding: 14px 22px;
+  border-radius: 10px;
+  font-weight: bold;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  display: none;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Hidden Utility */
+.hidden {
+  display: none;
+}
+
+/* Accessibility Improvements */
+button:focus,
+input:focus {
+  outline: 3px solid rgba(45, 137, 239, 0.4);
+}
+
+/* Large Text Mode (Optional Toggle Later) */
+.large-text body {
+  font-size: 20px;
+}
+
+/* Emergency Highlight Option (future use) */
+.emergency {
+  background: var(--danger);
+  color: white;
+  padding: 15px;
+  border-radius: 12px;
+  text-align: center;
+  font-weight: bold;
+}
