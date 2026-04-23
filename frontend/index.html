@@ -1,1 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HyperCare AI</title>
 
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2d89ef">
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<link rel="stylesheet" href="css/styles.css">
+
+<style>
+body { margin:0; font-family:Arial; background:#f4f8fb; }
+.container { padding:20px; padding-bottom:80px; }
+.card {
+  background:white;
+  padding:20px;
+  margin-bottom:20px;
+  border-radius:10px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.1);
+}
+input, button {
+  width:100%;
+  padding:12px;
+  margin-bottom:10px;
+  font-size:16px;
+}
+button {
+  background:#2d89ef;
+  color:white;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+}
+button:hover { background:#1b5fa7; }
+
+nav {
+  display:flex;
+  justify-content:space-around;
+  background:#2d89ef;
+  color:white;
+  padding:10px;
+}
+nav button {
+  background:none;
+  color:white;
+  font-weight:bold;
+}
+
+@media (max-width:768px){
+  nav { position:fixed; bottom:0; width:100%; }
+}
+
+@media (min-width:769px){
+  nav { position:sticky; top:0; }
+}
+
+.toast {
+  position:fixed;
+  top:20px;
+  right:20px;
+  background:green;
+  color:white;
+  padding:10px 20px;
+  border-radius:6px;
+  display:none;
+}
+.hidden { display:none; }
+</style>
+</head>
+
+<body>
+
+<!-- Navigation -->
+<nav>
+  <button onclick="showSection('dashboard')">Dashboard</button>
+  <button onclick="showSection('devices')">Devices</button>
+  <button onclick="showSection('privacy')">Security</button>
+</nav>
+
+<div class="container">
+
+<!-- LOGIN SECTION -->
+<div id="loginSection" class="card">
+  <h2>Secure Login</h2>
+  <input type="text" id="username" placeholder="Username">
+  <input type="password" id="password" placeholder="Encryption Password">
+  <button onclick="registerUser()">Register (Biometric)</button>
+  <button onclick="loginUser()">Login</button>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="hidden">
+  <div class="card">
+    <h2>Blood Pressure Entry</h2>
+    <input type="number" id="sys" placeholder="Systolic">
+    <input type="number" id="dia" placeholder="Diastolic">
+    <button onclick="saveBP()">Save Reading</button>
+    <button onclick="startVoice()">🎤 Voice Input</button>
+    <p id="classification"></p>
+    <p id="riskScore"></p>
+  </div>
+
+  <div class="card">
+    <h2>Trend Graph</h2>
+    <canvas id="bpChart"></canvas>
+  </div>
+</div>
+
+<!-- DEVICES -->
+<div id="devices" class="hidden">
+  <div class="card">
+    <h2>Bluetooth BP Monitor</h2>
+    <button onclick="connectDevice()">Connect Device</button>
+    <p id="deviceStatus">Not Connected</p>
+  </div>
+</div>
+
+<!-- PRIVACY -->
+<div id="privacy" class="hidden">
+  <div class="card">
+    <h2>Privacy & Security</h2>
+    <p>✅ AES‑256 Encryption</p>
+    <p>✅ WebAuthn Biometrics</p>
+    <p>✅ JWT Authentication</p>
+    <p>✅ Audit Logging</p>
+    <button onclick="fetchGuidelines()">Check Guideline Updates</button>
+  </div>
+</div>
+
+</div>
+
+<div id="toast" class="toast">Saved ✅</div>
+
+<!-- MAIN MODULE -->
+<script type="module">
+
+import { encrypt, decrypt } from "./js/encryption.js";
+import { register, login } from "./js/auth.js";
+import { connectBPDevice } from "./js/bluetooth.js";
+import { loadModel, predictRisk } from "./js/ai.js";
+import { CONFIG } from "./js/config.js";
+
+let readings = [];
+let chart;
+let encryptionPassword = "";
+
+function showToast(msg){
+  const t=document.getElementById("toast");
+  t.innerText=msg;
+  t.style.display="block";
+  setTimeout(()=>t.style.display="none",2000);
+}
+
+window.showSection = function(id){
+  document.querySelectorAll("#dashboard,#devices,#privacy")
+    .forEach(s=>s.classList.add("hidden"));
+  document.getElementById(id).classList.remove("hidden");
+}
+
+window.registerUser = async function(){
+  const username = document.getElementById("username").value;
+  await register(username);
+  showToast("Biometric Registered ✅");
+}
+
+window.loginUser = async function(){
+  const username = document.getElementById("username").value;
+  encryptionPassword = document.getElementById("password").value;
+
+  await login(username);
+
+  document.getElementById("loginSection").classList.add("hidden");
+  document.getElementById("dashboard").classList.remove("hidden");
+
+  loadStoredData();
+  initChart();
+  await loadModel();
+
+  showToast("Login Successful ✅");
+}
+
+async function loadStoredData(){
+  const stored = localStorage.getItem("bpData");
+  if(stored){
+    const decrypted = await decrypt(JSON.parse(stored), encryptionPassword);
+    readings = decrypted;
+  }
+}
+
+async function saveBP(){
+  const sys = parseInt(document.getElementById("sys").value);
+  const dia = parseInt(document.getElementById("dia").value);
+  if(!sys || !dia) return;
+
+  const entry = { sys, dia, date:new Date().toLocaleDateString() };
+  readings.push(entry);
+
+  const encrypted = await encrypt(readings, encryptionPassword);
+  localStorage.setItem("bpData", JSON.stringify(encrypted));
+
+  classify(sys,dia);
+  updateChart();
+  calculateRisk();
+  showToast("Reading Saved ✅");
+}
+
+function classify(sys,dia){
+  let text="";
+  if(sys>=180||dia>=120) text="⚠ Hypertensive Crisis";
+  else if(sys>=140||dia>=90) text="Stage 2 Hypertension";
+  else if(sys>=130||dia>=80) text="Stage 1 Hypertension";
+  else text="Normal / Elevated";
+  document.getElementById("classification").innerText=text;
+}
+
+function initChart(){
+  const ctx=document.getElementById("bpChart").getContext("2d");
+  chart=new Chart(ctx,{
+    type:"line",
+    data:{
+      labels: readings.map(r=>r.date),
+      datasets:[
+        {label:"Systolic",data:readings.map(r=>r.sys),borderColor:"red"},
+        {label:"Diastolic",data:readings.map(r=>r.dia),borderColor:"blue"}
+      ]
+    }
+  });
+}
+
+function updateChart(){
+  chart.data.labels=readings.map(r=>r.date);
+  chart.data.datasets[0].data=readings.map(r=>r.sys);
+  chart.data.datasets[1].data=readings.map(r=>r.dia);
+  chart.update();
+}
+
+function calculateRisk(){
+  if(readings.length<3) return;
+
+  const avg = readings.slice(-3).reduce((a,b)=>a+b.sys,0)/3;
+  const variability = Math.max(...readings.map(r=>r.sys)) -
+                      Math.min(...readings.map(r=>r.sys));
+  const adherence = 0.9; // mock
+
+  const risk = predictRisk(avg, variability, adherence);
+  document.getElementById("riskScore").innerText =
+    "AI Risk Score: " + (risk*100).toFixed(1) + "%";
+}
+
+window.startVoice = function(){
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SpeechRecognition){ alert("Not supported"); return; }
+  const recognition = new SpeechRecognition();
+  recognition.onresult=function(e){
+    const text=e.results[0][0].transcript;
+    const nums=text.match(/\d+/g);
+    if(nums && nums.length>=2){
+      document.getElementById("sys").value=nums[0];
+      document.getElementById("dia").value=nums[1];
+      showToast("Voice Captured ✅");
+    }
+  };
+  recognition.start();
+}
+
+window.connectDevice = async function(){
+  await connectBPDevice((sys,dia)=>{
+    document.getElementById("sys").value=sys;
+    document.getElementById("dia").value=dia;
+    showToast("Device Reading Received ✅");
+  });
+  document.getElementById("deviceStatus").innerText="Connected ✅";
+}
+
+window.fetchGuidelines = async function(){
+  const res = await fetch(CONFIG.API_BASE + "/guidelines");
+  const data = await res.json();
+  showToast("Guideline Version: " + data.version);
+}
+
+</script>
+
+</body>
+</html>
